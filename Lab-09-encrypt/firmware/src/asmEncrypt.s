@@ -10,7 +10,7 @@
 .type nameStr,%gnu_unique_object
     
 /*** STUDENTS: Change the next line to your name!  **/
-nameStr: .asciz "Inigo Montoya"  
+nameStr: .asciz "Roberta Cavallaro"  
 .align
  
 /* initialize a global variable that C can access to print the nameStr */
@@ -85,17 +85,89 @@ where:
 .type asmEncrypt,%function
 asmEncrypt:   
 
-    // save the caller's registers, as required by the ARM calling convention
+    /**save the caller's registers, as required by the ARM calling convention**/
     push {r4-r11,LR}
     
     /* YOUR asmEncrypt CODE BELOW THIS LINE! VVVVVVVVVVVVVVVVVVVVV  */
 
+/** r0 for input text, r1 for key value K, cipherText label for mem location **/
 
-
+    ldr r2, =cipherText /** load the address of cipherText into r2 **/
+    
+    mov r3, r2 /** Store cipherText address **/
+    
+    /** Make key between range 0-25 **/
+    and r1, r1, #0xFF    /**  Get the lowest byte inly **/
+    cmp r1, #26		 /**Comparison **/
+    bge key_adjust       /** If r1 is grean than or equal 26 jump to key_adjust **/
+    b process_loop       /** Otherwise jump to the process loop **/
+    
+key_adjust:
+   
+    mov r1, #0            /** Adjust key to be in range 0-25 **/
+    
+process_loop:    
+    ldrb r4, [r0], #1    /** Load a byte from the input text and increment counter**/
+    
+    /** Check if we've reached the end encrypting **/
+    cmp r4, #0
+    beq done_encrypting
+    
+    /** Check for uppercase letter **/
+    cmp r4, #'A'
+    blt store_unchanged  /** If it is less than 'A'then is not a letter **/
+    cmp r4, #'Z'
+    ble encrypt_uppercase
+    
+    /** Check for lowercase letter **/
+    cmp r4, #'a'
+    blt store_unchanged  /** If it is less than 'a' and greater than 'Z' then it is not a letter **/
+    cmp r4, #'z'
+    ble encrypt_lowercase
+    
+    
+    b store_unchanged/** The character is not a letter if here **/
+    
+encrypt_uppercase:
+    /** Encrypt uppercase letter**/
+    sub r4, r4, #'A'    /** Convert to 0-25 range **/
+    add r4, r4, r1      /** Add key **/
+    cmp r4, #25
+    ble upper_in_range  /** If within range skip */
+    sub r4, r4, #26     /** Wrap if it is needed **/
+upper_in_range:
+    add r4, r4, #'A'    /** Convert to standand mode**/
+    b store_char
+    
+encrypt_lowercase:
+    /** Encrypt lowercase letter **/
+    sub r4, r4, #'a'    /** Convert to 0-25 range **/
+    add r4, r4, r1      /** Add  key **/
+    cmp r4, #25
+    ble lower_in_range  /** If within range skip wrap **/
+    sub r4, r4, #26     /** Wrapif it is needed **/
+lower_in_range:
+    add r4, r4, #'a'    /** Convert to standard mode */
+    b store_char
+    
+store_unchanged:
+    b store_char  /** Store the character unchanged **/
+    
+store_char:
+    strb r4, [r2], #1   /** Store byte and increment pointer **/
+    b process_loop      /** Go back to main loop **/
+    
+done_encrypting:
+    
+    mov r4, #0 /** Reached end of the input string so we add null terminator **/
+    strb r4, [r2]
+    
+    
+    ldr r0, =cipherText /** Return the pointer to cipherText **/
     
     /* YOUR asmEncrypt CODE ABOVE THIS LINE! ^^^^^^^^^^^^^^^^^^^^^  */
 
-    // restore the caller's registers, as required by the ARM calling convention
+    /**restore the caller's registers, as required by the ARM calling convention **/
     pop {r4-r11,LR}
 
     mov pc, lr	 /* asmEncrypt return to caller */
